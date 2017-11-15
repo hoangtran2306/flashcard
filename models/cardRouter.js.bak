@@ -1,0 +1,131 @@
+var express = require('express');
+var router = express.Router();
+var connection = require('../lib/db.js');
+var bodyParser = require('body-parser');
+
+var urlencodedParser = bodyParser.urlencoded({ extended: true });
+router.use(bodyParser.json());
+
+//-----------------------------------------------------------------------------------------------------------------
+
+//get cards using id - collection search
+
+router.param('id', function (req, res, next, id) {
+  var queryList = 'SELECT * FROM `T_CARD` WHERE id = ' + connection.escape(id);
+  connection.query(queryList, function(err, rows){
+    if (!err){
+      str = JSON.stringify(rows);
+      if (str != '[]'){
+        //search collection
+        res.json({ status: '200' , id: id , cards :rows });
+        //res.status(200).json({id: id , cards :rows});
+      } else {
+        res.json({ status: '404' , message : 'Không tìm thấy card.'});
+      }
+    }
+    else{
+      res.json({ status: '503' , message : 'Lỗi kết nối.'});
+    }
+    });
+  });
+
+router.get('/collection/id/:id', urlencodedParser, function (req, res) {
+  res.end();
+});
+
+//-----------------------------------------------------------------------------------------------------------------
+
+//get cards using name - user search
+
+router.param('card', function (req, res, next, card) {
+  var queryList = 'SELECT * FROM `T_CARD` WHERE word LIKE ' + connection.escape('%' + card + '%');
+  connection.query(queryList, function(err, rows){
+    if (!err){
+      str = JSON.stringify(rows);
+      if (str != '[]'){
+        //search collection
+        res.json({ status: '200' , word: card , cards :rows });
+      } else {
+        res.json({ status: '404' ,  message : 'Không tìm thấy card.'});
+      }
+    }
+    else{
+      res.json({ status: '503' , message : 'Lỗi kết nối.'});
+    }
+    });
+  });
+
+router.get('/collection/name/:card', urlencodedParser, function (req, res) {
+  res.end();
+});
+
+//-----------------------------------------------------------------------------------------------------------------
+
+//post cards - user add new cards
+router.post('/insert/cards', urlencodedParser, function (req, res) {
+  //var post = {word: '1', description: 'xin chao'};//post.word
+  var post = req.body;
+  if (!post.word || !post.description)  {
+    var queryList = 'INSERT INTO `T_CARD_USER` SET ' + connection.escape(post);
+    connection.query(queryList, function(err, rows){
+      if (!err){
+        res.json({ status: '200' , message : 'Bạn đã thêm thẻ thành công!' });
+      } else {
+        res.json({ status: '404' , message : 'Máy chủ bận.'});
+      }
+    });
+  } else {
+    res.json({status: '500', message : 'Điền đấy đủ nội dung.'});
+  }
+});
+
+//-----------------------------------------------------------------------------------------------------------------
+
+//update cards using id - collection update
+
+router.put('/update/id', urlencodedParser, function (req, res) {
+  var post = req.body;
+  var pronounce = post.pronounce;
+  var type = post.type;
+  var word = post.word;
+  var description = post.description;
+  var hint = post.hint;
+  var image = post.image;
+  var sound = post.sound;
+  var example = post.example;
+  connection.query('UPDATE `T_CARD_USER` SET ? WHERE ?',{}, {id : post.id}, function(err, rows){
+    if (!err){
+        res.json({ status: '200' , message : 'Cập nhật thành công.' });
+    }
+    else{
+      res.json({ status: '503' , message : 'Lỗi kết nối'});
+    }
+    });
+});
+
+//-----------------------------------------------------------------------------------------------------------------
+
+//update cards using name - user update
+
+router.put('/update/name', urlencodedParser, function (req, res) {
+  var post = req.body;
+  var pronounce = post.pronounce;
+  var type = post.type;
+  var word = post.word;
+  var description = post.description;
+  var hint = post.hint;
+  var image = post.image;
+  var sound = post.sound;
+  var example = post.example;
+  connection.query('UPDATE `T_CARD_USER` SET ? WHERE ?',{}, {word: post.word}, function(err, rows){
+    if (!err){
+        res.json({ status: '200' , message : 'Cập nhật thành công.' });
+    }
+    else{
+      res.json({ status: '503' , message : 'Lỗi kết nối'});
+    }
+    });
+});
+
+//-----------------------------------------------------------------------------------------------------------------
+module.exports = router;
